@@ -22,6 +22,9 @@ const SVGTableEditor = ({
   const [draggedLine, setDraggedLine] = useState(null);
   const [verticalPositions, setVerticalPositions] = useState([]);
   const [horizontalPositions, setHorizontalPositions] = useState([]);
+  const [hoveredEdge, setHoveredEdge] = useState(null);
+  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
+  const [buttonTimeout, setButtonTimeout] = useState(null);
   const svgRef = useRef();
 
   useEffect(() => {
@@ -98,6 +101,54 @@ const SVGTableEditor = ({
     setDraggedLine(null);
   };
 
+  const handleMouseEnter = (event) => {
+    const svgRect = svgRef.current.getBoundingClientRect();
+    const offsetX = event.clientX - svgRect.left;
+    const offsetY = event.clientY - svgRect.top;
+
+    const edgeThreshold = 10;
+
+    if (offsetY < boundingBox.minY * height + edgeThreshold) {
+      setHoveredEdge("top");
+      setButtonPosition({
+        x: boundingBox.minX * width + (boundingBox.width * width) / 2,
+        y: boundingBox.minY * height,
+      });
+    } else if (offsetX > boundingBox.maxX * width - edgeThreshold) {
+      setHoveredEdge("right");
+      setButtonPosition({
+        x: boundingBox.maxX * width,
+        y: boundingBox.minY * height + (boundingBox.height * height) / 2,
+      });
+    } else if (offsetY > boundingBox.maxY * height - edgeThreshold) {
+      setHoveredEdge("bottom");
+      setButtonPosition({
+        x: boundingBox.minX * width + (boundingBox.width * width) / 2,
+        y: boundingBox.maxY * height,
+      });
+    } else if (offsetX < boundingBox.minX * width + edgeThreshold) {
+      setHoveredEdge("left");
+      setButtonPosition({
+        x: boundingBox.minX * width,
+        y: boundingBox.minY * height + (boundingBox.height * height) / 2,
+      });
+    } else {
+      setHoveredEdge(null);
+    }
+
+    if (buttonTimeout) {
+      clearTimeout(buttonTimeout);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setButtonTimeout(
+      setTimeout(() => {
+        setHoveredEdge(null);
+      }, 3000),
+    );
+  };
+
   return (
     <SVGContainer
       width={width}
@@ -107,17 +158,6 @@ const SVGTableEditor = ({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      {/* Render bounding rectangle */}
-      <rect
-        x={boundingBox.minX * width}
-        y={boundingBox.minY * height}
-        width={boundingBox.width * width}
-        height={boundingBox.height * height}
-        fill="none"
-        stroke="red"
-        strokeWidth="2"
-      />
-
       {verticalPositions.map((position, index) => (
         <line
           key={`vertical-${index}`}
@@ -125,10 +165,11 @@ const SVGTableEditor = ({
           y1={verticalLines[index].vertices[0].y * height}
           x2={position * width}
           y2={verticalLines[index].vertices[1].y * height}
-          stroke="black"
-          strokeWidth="1"
+          stroke="rgb(57, 61, 63)"
+          strokeOpacity={0.5}
+          strokeWidth="2"
           onMouseDown={(event) => handleLineMouseDown(event, "vertical", index)}
-          style={{ cursor: "ew-resize" }}
+          style={{ cursor: "col-resize" }}
         />
       ))}
       {horizontalPositions.map((position, index) => (
@@ -138,14 +179,63 @@ const SVGTableEditor = ({
           y1={position * height}
           x2={horizontalLines[index].vertices[1].x * width}
           y2={position * height}
-          stroke="black"
-          strokeWidth="1"
+          stroke="rgb(57, 61, 63)"
+          strokeOpacity={0.5}
+          strokeWidth="2"
           onMouseDown={(event) =>
             handleLineMouseDown(event, "horizontal", index)
           }
-          style={{ cursor: "ns-resize" }}
+          style={{ cursor: "row-resize" }}
         />
       ))}
+
+      {/* Render bounding rectangle */}
+      <rect
+        x={boundingBox.minX * width}
+        y={boundingBox.minY * height}
+        width={boundingBox.width * width}
+        height={boundingBox.height * height}
+        fill="none"
+        stroke="rgb(198, 197, 185)"
+        strokeWidth="4"
+        onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      />
+
+      {/* Render attach circle button */}
+      {/* Render attach circle button */}
+      {hoveredEdge && (
+        <g
+          style={{
+            cursor: "pointer",
+          }}
+          onClick={() => console.log(`Attach to ${hoveredEdge} edge`)}
+        >
+          <circle
+            cx={buttonPosition.x}
+            cy={buttonPosition.y}
+            r="10"
+            fill="rgb(57, 61, 63)"
+          />
+          <line
+            x1={buttonPosition.x - 4}
+            y1={buttonPosition.y}
+            x2={buttonPosition.x + 4}
+            y2={buttonPosition.y}
+            stroke="white"
+            strokeWidth="2"
+          />
+          <line
+            x1={buttonPosition.x}
+            y1={buttonPosition.y - 4}
+            x2={buttonPosition.x}
+            y2={buttonPosition.y + 4}
+            stroke="white"
+            strokeWidth="2"
+          />
+        </g>
+      )}
     </SVGContainer>
   );
 };

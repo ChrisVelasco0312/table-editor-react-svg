@@ -8,7 +8,7 @@ const ContextMenu = ({ options, onSelect, children }) => {
   const handleContextMenu = (event) => {
     event.preventDefault();
     setIsOpen(true);
-    setPosition({ x: event.clientX, y: event.clientY });
+    setPosition({ x: event.clientX + 15, y: event.clientY + 100 });
   };
 
   const handleOptionClick = (option) => {

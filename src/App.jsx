@@ -4,13 +4,13 @@ import { dataMock } from "./data-mock";
 import ContextMenu from "./components/ContextMenu";
 
 function App() {
+  const tableData = dataMock;
   const [tableCopy, setTableCopy] = useState({
-    verticalLines: [],
-    horizontalLines: [],
+    verticalLines: tableData.verticalLines,
+    horizontalLines: tableData.horizontalLines,
   });
   const width = 918;
   const height = 1188;
-  const tableData = dataMock;
 
   console.info({ tableCopy });
 
@@ -24,8 +24,8 @@ function App() {
         <SVGTableEditor
           width={width}
           height={height}
-          horizontalLines={tableData.horizontalLines}
-          verticalLines={tableData.verticalLines}
+          horizontalLines={tableCopy.horizontalLines}
+          verticalLines={tableCopy.verticalLines}
           boundingPoly={tableData.boundingPoly}
           onLinesUpdate={(vertical, horizontal) =>
             setTableCopy({
