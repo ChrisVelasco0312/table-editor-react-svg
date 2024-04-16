@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import SVGContainer from "./SVGContainer";
 
 const SVGTableEditor = ({
@@ -17,13 +18,63 @@ const SVGTableEditor = ({
   boundingBox.width = boundingBox.maxX - boundingBox.minX;
   boundingBox.height = boundingBox.maxY - boundingBox.minY;
 
-  const handleVerticalLineMouseDown = (event) => {
-    const startX = event.clientX;
-    console.log(startX, event);
+  const [draggedLine, setDraggedLine] = useState(null);
+  const [verticalPositions, setVerticalPositions] = useState(
+    verticalLines.map((line) => line.vertices[0].x),
+  );
+  const [horizontalPositions, setHorizontalPositions] = useState(
+    horizontalLines.map((line) => line.vertices[0].y),
+  );
+  const svgRef = useRef();
+
+  const handleLineMouseDown = (event, lineType, index) => {
+    setDraggedLine({ lineType, index });
+  };
+
+  const handleMouseMove = (event) => {
+    if (!draggedLine) return;
+
+    const { lineType, index } = draggedLine;
+    const svgRect = svgRef.current.getBoundingClientRect();
+    const offsetX = event.clientX - svgRect.left;
+    const offsetY = event.clientY - svgRect.top;
+
+    if (lineType === "vertical") {
+      const newX = Math.min(
+        Math.max(offsetX / width, boundingBox.minX),
+        boundingBox.maxX,
+      );
+      setVerticalPositions((prevPositions) => {
+        const newPositions = [...prevPositions];
+        newPositions[index] = newX;
+        return newPositions;
+      });
+    } else if (lineType === "horizontal") {
+      const newY = Math.min(
+        Math.max(offsetY / height, boundingBox.minY),
+        boundingBox.maxY,
+      );
+      setHorizontalPositions((prevPositions) => {
+        const newPositions = [...prevPositions];
+        newPositions[index] = newY;
+        return newPositions;
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setDraggedLine(null);
   };
 
   return (
-    <SVGContainer width={width} height={height}>
+    <SVGContainer
+      width={width}
+      height={height}
+      ref={svgRef}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
       {/* Render bounding rectangle */}
       <rect
         x={boundingBox.minX * width}
@@ -35,27 +86,32 @@ const SVGTableEditor = ({
         strokeWidth="2"
       />
 
-      {verticalLines.map((line, index) => (
+      {verticalPositions.map((position, index) => (
         <line
           key={`vertical-${index}`}
-          x1={line.first.x * width}
-          y1={line.first.y * height}
-          x2={line.last.x * width}
-          y2={line.last.y * height}
+          x1={position * width}
+          y1={verticalLines[index].vertices[0].y * height}
+          x2={position * width}
+          y2={verticalLines[index].vertices[1].y * height}
           stroke="black"
           strokeWidth="1"
-          onMouseDown={handleVerticalLineMouseDown}
+          onMouseDown={(event) => handleLineMouseDown(event, "vertical", index)}
+          style={{ cursor: "ew-resize" }}
         />
       ))}
-      {horizontalLines.map((line, index) => (
+      {horizontalPositions.map((position, index) => (
         <line
           key={`horizontal-${index}`}
-          x1={line.first.x * width}
-          y1={line.first.y * height}
-          x2={line.last.x * width}
-          y2={line.last.y * height}
+          x1={horizontalLines[index].vertices[0].x * width}
+          y1={position * height}
+          x2={horizontalLines[index].vertices[1].x * width}
+          y2={position * height}
           stroke="black"
           strokeWidth="1"
+          onMouseDown={(event) =>
+            handleLineMouseDown(event, "horizontal", index)
+          }
+          style={{ cursor: "ns-resize" }}
         />
       ))}
     </SVGContainer>
