@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SVGContainer from "./SVGContainer";
 
 const SVGTableEditor = ({
@@ -7,6 +7,7 @@ const SVGTableEditor = ({
   horizontalLines,
   width,
   height,
+  onLinesUpdate,
 }) => {
   const { vertices } = boundingPoly;
   const boundingBox = {
@@ -19,15 +20,16 @@ const SVGTableEditor = ({
   boundingBox.height = boundingBox.maxY - boundingBox.minY;
 
   const [draggedLine, setDraggedLine] = useState(null);
-  const [verticalPositions, setVerticalPositions] = useState(
-    verticalLines.map((line) => line.vertices[0].x),
-  );
-  const [horizontalPositions, setHorizontalPositions] = useState(
-    horizontalLines.map((line) => line.vertices[0].y),
-  );
+  const [verticalPositions, setVerticalPositions] = useState([]);
+  const [horizontalPositions, setHorizontalPositions] = useState([]);
   const svgRef = useRef();
 
-  const handleLineMouseDown = (event, lineType, index) => {
+  useEffect(() => {
+    setVerticalPositions(verticalLines.map((line) => line.vertices[0].x));
+    setHorizontalPositions(horizontalLines.map((line) => line.vertices[0].y));
+  }, [verticalLines, horizontalLines]);
+
+  const handleLineMouseDown = (_, lineType, index) => {
     setDraggedLine({ lineType, index });
   };
 
@@ -63,6 +65,36 @@ const SVGTableEditor = ({
   };
 
   const handleMouseUp = () => {
+    if (draggedLine) {
+      const { lineType, index } = draggedLine;
+      if (lineType === "vertical") {
+        const newVerticalLines = verticalLines.map((line, i) => {
+          if (i === index) {
+            const newLine = { ...line };
+            newLine.vertices = newLine.vertices.map((vertex) => ({
+              ...vertex,
+              x: verticalPositions[index],
+            }));
+            return newLine;
+          }
+          return line;
+        });
+        onLinesUpdate(newVerticalLines, horizontalLines);
+      } else if (lineType === "horizontal") {
+        const newHorizontalLines = horizontalLines.map((line, i) => {
+          if (i === index) {
+            const newLine = { ...line };
+            newLine.vertices = newLine.vertices.map((vertex) => ({
+              ...vertex,
+              y: horizontalPositions[index],
+            }));
+            return newLine;
+          }
+          return line;
+        });
+        onLinesUpdate(verticalLines, newHorizontalLines);
+      }
+    }
     setDraggedLine(null);
   };
 
