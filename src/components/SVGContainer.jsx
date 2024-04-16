@@ -1,7 +1,10 @@
 import { forwardRef } from "react";
 
 const SVGContainer = forwardRef(
-  ({ width, height, onMouseMove, onMouseUp, onMouseLeave, children }, ref) => {
+  (
+    { width, height, onMouseMove, onMouseUp, onMouseLeave, onClick, children },
+    ref,
+  ) => {
     return (
       <svg
         ref={ref}
@@ -11,6 +14,7 @@ const SVGContainer = forwardRef(
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseLeave}
+        onClick={onClick}
       >
         {children}
       </svg>

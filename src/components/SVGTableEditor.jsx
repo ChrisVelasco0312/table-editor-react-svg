@@ -25,6 +25,7 @@ const SVGTableEditor = ({
   const [hoveredEdge, setHoveredEdge] = useState(null);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
   const [buttonTimeout, setButtonTimeout] = useState(null);
+  const [selectedLine, setSelectedLine] = useState(null);
   const svgRef = useRef();
 
   useEffect(() => {
@@ -32,8 +33,10 @@ const SVGTableEditor = ({
     setHorizontalPositions(horizontalLines.map((line) => line.vertices[0].y));
   }, [verticalLines, horizontalLines]);
 
-  const handleLineMouseDown = (_, lineType, index) => {
+  const handleLineMouseDown = (event, lineType, index) => {
+    event.preventDefault();
     setDraggedLine({ lineType, index });
+    setSelectedLine({ lineType, index });
   };
 
   const handleMouseMove = (event) => {
@@ -149,6 +152,39 @@ const SVGTableEditor = ({
     );
   };
 
+  const handleSVGClick = (event) => {
+    const clickedElement = event.target;
+    if (
+      clickedElement.tagName !== "line" &&
+      clickedElement.tagName !== "circle" &&
+      clickedElement.tagName !== "path"
+    ) {
+      setSelectedLine(null);
+    }
+  };
+
+  const handleTrashButtonClick = () => {
+    if (selectedLine) {
+      const { lineType, index } = selectedLine;
+      if (lineType === "vertical") {
+        const newVerticalLines = verticalLines.filter((_, i) => i !== index);
+        setVerticalPositions(
+          newVerticalLines.map((line) => line.vertices[0].x),
+        );
+        onLinesUpdate(newVerticalLines, horizontalLines);
+      } else if (lineType === "horizontal") {
+        const newHorizontalLines = horizontalLines.filter(
+          (_, i) => i !== index,
+        );
+        setHorizontalPositions(
+          newHorizontalLines.map((line) => line.vertices[0].y),
+        );
+        onLinesUpdate(verticalLines, newHorizontalLines);
+      }
+      setSelectedLine(null);
+    }
+  };
+
   return (
     <SVGContainer
       width={width}
@@ -157,37 +193,60 @@ const SVGTableEditor = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onClick={handleSVGClick}
     >
-      {verticalPositions.map((position, index) => (
-        <line
-          key={`vertical-${index}`}
-          x1={position * width}
-          y1={verticalLines[index].vertices[0].y * height}
-          x2={position * width}
-          y2={verticalLines[index].vertices[1].y * height}
-          stroke="rgb(57, 61, 63)"
-          strokeOpacity={0.5}
-          strokeWidth="2"
-          onMouseDown={(event) => handleLineMouseDown(event, "vertical", index)}
-          style={{ cursor: "col-resize" }}
-        />
-      ))}
-      {horizontalPositions.map((position, index) => (
-        <line
-          key={`horizontal-${index}`}
-          x1={horizontalLines[index].vertices[0].x * width}
-          y1={position * height}
-          x2={horizontalLines[index].vertices[1].x * width}
-          y2={position * height}
-          stroke="rgb(57, 61, 63)"
-          strokeOpacity={0.5}
-          strokeWidth="2"
-          onMouseDown={(event) =>
-            handleLineMouseDown(event, "horizontal", index)
-          }
-          style={{ cursor: "row-resize" }}
-        />
-      ))}
+      {verticalPositions.map((position, index) => {
+        const verticalLine = verticalLines[index];
+        if (!verticalLine) return null;
+        return (
+          <line
+            key={`vertical-${index}`}
+            x1={position * width}
+            y1={verticalLine.vertices[0].y * height}
+            x2={position * width}
+            y2={verticalLine.vertices[1].y * height}
+            stroke={
+              selectedLine &&
+              selectedLine.lineType === "vertical" &&
+              selectedLine.index === index
+                ? "rgb(57, 61, 63)"
+                : "rgb(198, 197, 185)"
+            }
+            strokeOpacity={0.5}
+            strokeWidth="2"
+            onMouseDown={(event) =>
+              handleLineMouseDown(event, "vertical", index)
+            }
+            style={{ cursor: "col-resize" }}
+          />
+        );
+      })}
+      {horizontalPositions.map((position, index) => {
+        const horizontalLine = horizontalLines[index];
+        if (!horizontalLine) return null;
+        return (
+          <line
+            key={`horizontal-${index}`}
+            x1={horizontalLine.vertices[0].x * width}
+            y1={position * height}
+            x2={horizontalLine.vertices[1].x * width}
+            y2={position * height}
+            stroke={
+              selectedLine &&
+              selectedLine.lineType === "horizontal" &&
+              selectedLine.index === index
+                ? "rgb(57, 61, 63)"
+                : "rgb(198, 197, 185)"
+            }
+            strokeOpacity={0.5}
+            strokeWidth="2"
+            onMouseDown={(event) =>
+              handleLineMouseDown(event, "horizontal", index)
+            }
+            style={{ cursor: "row-resize" }}
+          />
+        );
+      })}
 
       {/* Render bounding rectangle */}
       <rect
@@ -203,7 +262,6 @@ const SVGTableEditor = ({
         onMouseLeave={handleMouseLeave}
       />
 
-      {/* Render attach circle button */}
       {/* Render attach circle button */}
       {hoveredEdge && (
         <g
@@ -233,6 +291,46 @@ const SVGTableEditor = ({
             y2={buttonPosition.y + 4}
             stroke="white"
             strokeWidth="2"
+          />
+        </g>
+      )}
+
+      {/* Render trash button */}
+      {selectedLine && (
+        <g
+          style={{
+            cursor: "pointer",
+          }}
+          onClick={handleTrashButtonClick}
+        >
+          <circle
+            cx={
+              selectedLine.lineType === "vertical"
+                ? verticalPositions[selectedLine.index] * width
+                : horizontalLines[selectedLine.index].vertices[1].x * width
+            }
+            cy={
+              selectedLine.lineType === "horizontal"
+                ? horizontalPositions[selectedLine.index] * height
+                : verticalLines[selectedLine.index].vertices[1].y * height
+            }
+            r="10"
+            fill="rgb(57, 61, 63)"
+          />
+          <path
+            d="M4.5,4 L7.5,7 M7.5,4 L4.5,7"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            transform={`translate(${
+              selectedLine.lineType === "vertical"
+                ? verticalPositions[selectedLine.index] * width - 6
+                : horizontalLines[selectedLine.index].vertices[1].x * width - 6
+            }, ${
+              selectedLine.lineType === "horizontal"
+                ? horizontalPositions[selectedLine.index] * height - 6
+                : verticalLines[selectedLine.index].vertices[1].y * height - 6
+            })`}
           />
         </g>
       )}
