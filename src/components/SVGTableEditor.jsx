@@ -185,6 +185,96 @@ const SVGTableEditor = ({
     }
   };
 
+  const handleAddLineButtonClick = () => {
+    const minSpaceThreshold = 0.01; // Adjust this value as needed
+
+    if (hoveredEdge === "top") {
+      const nearestSpace = horizontalPositions
+        .filter((position) => position > boundingBox.minY)
+        .reduce((nearest, position) => {
+          const space = position - boundingBox.minY;
+          return space > minSpaceThreshold &&
+            (space < nearest || nearest === null)
+            ? space
+            : nearest;
+        }, null);
+
+      if (nearestSpace !== null) {
+        const newY = boundingBox.minY + nearestSpace / 2;
+        const newLine = {
+          vertices: [
+            { x: boundingBox.minX, y: newY },
+            { x: boundingBox.maxX, y: newY },
+          ],
+        };
+        onLinesUpdate(verticalLines, [...horizontalLines, newLine]);
+      }
+    } else if (hoveredEdge === "right") {
+      const nearestSpace = verticalPositions
+        .filter((position) => position < boundingBox.maxX)
+        .reduce((nearest, position) => {
+          const space = boundingBox.maxX - position;
+          return space > minSpaceThreshold &&
+            (space < nearest || nearest === null)
+            ? space
+            : nearest;
+        }, null);
+
+      if (nearestSpace !== null) {
+        const newX = boundingBox.maxX - nearestSpace / 2;
+        const newLine = {
+          vertices: [
+            { x: newX, y: boundingBox.minY },
+            { x: newX, y: boundingBox.maxY },
+          ],
+        };
+        onLinesUpdate([...verticalLines, newLine], horizontalLines);
+      }
+    } else if (hoveredEdge === "bottom") {
+      const nearestSpace = horizontalPositions
+        .filter((position) => position < boundingBox.maxY)
+        .reduce((nearest, position) => {
+          const space = boundingBox.maxY - position;
+          return space > minSpaceThreshold &&
+            (space < nearest || nearest === null)
+            ? space
+            : nearest;
+        }, null);
+
+      if (nearestSpace !== null) {
+        const newY = boundingBox.maxY - nearestSpace / 2;
+        const newLine = {
+          vertices: [
+            { x: boundingBox.minX, y: newY },
+            { x: boundingBox.maxX, y: newY },
+          ],
+        };
+        onLinesUpdate(verticalLines, [...horizontalLines, newLine]);
+      }
+    } else if (hoveredEdge === "left") {
+      const nearestSpace = verticalPositions
+        .filter((position) => position > boundingBox.minX)
+        .reduce((nearest, position) => {
+          const space = position - boundingBox.minX;
+          return space > minSpaceThreshold &&
+            (space < nearest || nearest === null)
+            ? space
+            : nearest;
+        }, null);
+
+      if (nearestSpace !== null) {
+        const newX = boundingBox.minX + nearestSpace / 2;
+        const newLine = {
+          vertices: [
+            { x: newX, y: boundingBox.minY },
+            { x: newX, y: boundingBox.maxY },
+          ],
+        };
+        onLinesUpdate([...verticalLines, newLine], horizontalLines);
+      }
+    }
+  };
+
   return (
     <SVGContainer
       width={width}
@@ -268,7 +358,7 @@ const SVGTableEditor = ({
           style={{
             cursor: "pointer",
           }}
-          onClick={() => console.log(`Attach to ${hoveredEdge} edge`)}
+          onClick={handleAddLineButtonClick}
         >
           <circle
             cx={buttonPosition.x}
