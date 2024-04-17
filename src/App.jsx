@@ -12,8 +12,6 @@ function App() {
   const width = 918;
   const height = 1188;
 
-  console.info({ tableCopy });
-
   // return <SVGTable width={width} height={height} data={tableData} />;
   return (
     <>

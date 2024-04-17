@@ -26,7 +26,27 @@ const SVGTableEditor = ({
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
   const [buttonTimeout, setButtonTimeout] = useState(null);
   const [selectedLine, setSelectedLine] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [future, setFuture] = useState([]);
   const svgRef = useRef();
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "z") {
+        event.preventDefault();
+        handleUndo();
+      } else if ((event.ctrlKey || event.metaKey) && event.key === "y") {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [history, future]);
 
   useEffect(() => {
     setVerticalPositions(verticalLines.map((line) => line.vertices[0].x));
@@ -86,6 +106,7 @@ const SVGTableEditor = ({
           return line;
         });
         onLinesUpdate(newVerticalLines, horizontalLines);
+        addToHistory(verticalLines, horizontalLines);
       } else if (lineType === "horizontal") {
         const newHorizontalLines = horizontalLines.map((line, i) => {
           if (i === index) {
@@ -99,6 +120,7 @@ const SVGTableEditor = ({
           return line;
         });
         onLinesUpdate(verticalLines, newHorizontalLines);
+        addToHistory(verticalLines, horizontalLines);
       }
     }
     setDraggedLine(null);
@@ -172,6 +194,7 @@ const SVGTableEditor = ({
           newVerticalLines.map((line) => line.vertices[0].x),
         );
         onLinesUpdate(newVerticalLines, horizontalLines);
+        addToHistory(verticalLines, horizontalLines);
       } else if (lineType === "horizontal") {
         const newHorizontalLines = horizontalLines.filter(
           (_, i) => i !== index,
@@ -180,6 +203,7 @@ const SVGTableEditor = ({
           newHorizontalLines.map((line) => line.vertices[0].y),
         );
         onLinesUpdate(verticalLines, newHorizontalLines);
+        addToHistory(verticalLines, horizontalLines);
       }
       setSelectedLine(null);
     }
@@ -207,6 +231,7 @@ const SVGTableEditor = ({
             { x: boundingBox.maxX, y: newY },
           ],
         };
+        addToHistory(verticalLines, horizontalLines); // Save the current state before updating
         onLinesUpdate(verticalLines, [...horizontalLines, newLine]);
       }
     } else if (hoveredEdge === "right") {
@@ -228,6 +253,7 @@ const SVGTableEditor = ({
             { x: newX, y: boundingBox.maxY },
           ],
         };
+        addToHistory(verticalLines, horizontalLines); // Save the current state before updating
         onLinesUpdate([...verticalLines, newLine], horizontalLines);
       }
     } else if (hoveredEdge === "bottom") {
@@ -249,6 +275,7 @@ const SVGTableEditor = ({
             { x: boundingBox.maxX, y: newY },
           ],
         };
+        addToHistory(verticalLines, horizontalLines); // Save the current state before updating
         onLinesUpdate(verticalLines, [...horizontalLines, newLine]);
       }
     } else if (hoveredEdge === "left") {
@@ -270,8 +297,41 @@ const SVGTableEditor = ({
             { x: newX, y: boundingBox.maxY },
           ],
         };
+        addToHistory(verticalLines, horizontalLines); // Save the current state before updating
         onLinesUpdate([...verticalLines, newLine], horizontalLines);
       }
+    }
+  };
+
+  const addToHistory = (newVerticalLines, newHorizontalLines) => {
+    setHistory((prevHistory) => [
+      ...prevHistory,
+      { verticalLines: newVerticalLines, horizontalLines: newHorizontalLines },
+    ]);
+    setFuture([]);
+  };
+
+  const handleUndo = () => {
+    if (history.length > 0) {
+      const previous = history[history.length - 1];
+      setHistory((prevHistory) => prevHistory.slice(0, -1));
+      setFuture((prevFuture) => [
+        { verticalLines, horizontalLines },
+        ...prevFuture,
+      ]);
+      onLinesUpdate(previous.verticalLines, previous.horizontalLines);
+    }
+  };
+
+  const handleRedo = () => {
+    if (future.length > 0) {
+      const next = future[0];
+      setFuture((prevFuture) => prevFuture.slice(1));
+      setHistory((prevHistory) => [
+        ...prevHistory,
+        { verticalLines, horizontalLines },
+      ]);
+      onLinesUpdate(next.verticalLines, next.horizontalLines);
     }
   };
 
@@ -424,6 +484,46 @@ const SVGTableEditor = ({
           />
         </g>
       )}
+
+      {/* Render undo and redo buttons */}
+      <g onClick={handleUndo}>
+        <rect
+          x={10}
+          y={10}
+          width={60}
+          height={30}
+          fill="rgb(57, 61, 63)"
+          style={{ cursor: history.length > 0 ? "pointer" : "default" }}
+        />
+        <text
+          x={40}
+          y={30}
+          fill="white"
+          textAnchor="middle"
+          style={{ pointerEvents: "none" }}
+        >
+          Undo
+        </text>
+      </g>
+      <g onClick={handleRedo}>
+        <rect
+          x={80}
+          y={10}
+          width={60}
+          height={30}
+          fill="rgb(57, 61, 63)"
+          style={{ cursor: future.length > 0 ? "pointer" : "default" }}
+        />
+        <text
+          x={110}
+          y={30}
+          fill="white"
+          textAnchor="middle"
+          style={{ pointerEvents: "none" }}
+        >
+          Redo
+        </text>
+      </g>
     </SVGContainer>
   );
 };
