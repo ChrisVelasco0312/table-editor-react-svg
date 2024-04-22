@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "ladle": "npx ladle serve"
   },
   "dependencies": {
+    "@ladle/react": "^4.0.3",
+    "ladle": "^0.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

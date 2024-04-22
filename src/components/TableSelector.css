@@ -1,0 +1,17 @@
+.selection-container {
+  border: 1px solid #ccc;
+  cursor: none;
+}
+
+.selection-overlay {
+  fill-rule: evenodd;
+  fill: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.selection-rect {
+  fill: none;
+  stroke: #000;
+  stroke-width: 1;
+  pointer-events: none;
+}
